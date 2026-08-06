@@ -63,8 +63,12 @@ def get_data(filters):
 	for vat_setting in bahrain_vat_setting.bahrain_vat_sales_accounts:
 		total_taxable_amount, total_taxable_adjustment_amount, \
 			total_tax = get_tax_data_for_each_vat_setting(vat_setting, filters, 'Sales Invoice')
-		
+
 		# Adding results to data
+		append_data(data, vat_setting.title, total_taxable_amount,
+			total_taxable_adjustment_amount, total_tax)
+
+		grand_total_taxable_amount += total_taxable_amount
 		grand_total_taxable_adjustment_amount += total_taxable_adjustment_amount
 		grand_total_tax += total_tax
 
@@ -113,11 +117,12 @@ def get_tax_data_for_each_vat_setting(vat_setting, filters, doctype):
 	total_taxable_adjustment_amount = 0
 	total_tax = 0
 	# Fetch All Invoices
-	invoices = frappe.get_list(doctype, 
+	invoices = frappe.get_list(doctype,
 	filters ={
 		'docstatus': 1,
+		'company': filters.get('company'),
 		'posting_date': ['between', [from_date, to_date]]
-	}, 
+	},
 	fields =['name', 'is_return'])
 
 	for invoice in invoices:
