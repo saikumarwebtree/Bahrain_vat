@@ -117,7 +117,7 @@ def get_tax_data_for_each_vat_setting(vat_setting, filters, doctype):
 	total_taxable_adjustment_amount = 0
 	total_tax = 0
 	# Fetch All Invoices
-	invoices = frappe.get_list(doctype,
+	invoices = frappe.get_all(doctype,
 	filters ={
 		'docstatus': 1,
 		'company': filters.get('company'),
@@ -126,12 +126,12 @@ def get_tax_data_for_each_vat_setting(vat_setting, filters, doctype):
 	fields =['name', 'is_return'])
 
 	for invoice in invoices:
-		invoice_items = frappe.get_list(f'{doctype} Item', 
+		invoice_items = frappe.get_all(f'{doctype} Item',
 		filters ={
 			'docstatus': 1,
 			'parent': invoice.name,
 			'item_tax_template': vat_setting.item_tax_template
-		}, 
+		},
 		fields =['item_code', 'net_amount'])
 
 		
