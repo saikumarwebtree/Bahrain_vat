@@ -126,26 +126,30 @@ def get_tax_data_for_each_vat_setting(vat_setting, filters, doctype):
 	fields =['name', 'is_return'])
 
 	for invoice in invoices:
-		invoice_items = frappe.get_all(f'{doctype} Item',
-		filters ={
-			'docstatus': 1,
-			'parent': invoice.name,
-			'item_tax_template': vat_setting.item_tax_template
-		},
-		fields =['item_code', 'net_amount'])
+		# ALL item rows of the invoice: item_wise_tax_detail is keyed by item code and holds the tax of every row of that
+		# item together, so a row's share is its part of the item's net amount (otherwise an item on two rows is counted twice).
+		all_rows = frappe.get_all(f'{doctype} Item',
+			filters={'docstatus': 1, 'parent': invoice.name},
+			fields=['item_code', 'net_amount', 'item_tax_template'])
+		net_by_item = {}
+		for r in all_rows:
+			net_by_item[r.item_code] = net_by_item.get(r.item_code, 0) + (r.net_amount or 0)
 
-		
-		for item in invoice_items:
+		for item in all_rows:
+			if item.item_tax_template != vat_setting.item_tax_template:
+				continue
 			# Summing up total taxable amount
 			if invoice.is_return == 0:
 				total_taxable_amount += item.net_amount
-			
+
 			if invoice.is_return == 1:
 				total_taxable_adjustment_amount += item.net_amount
 
-			# Summing up total tax
-			total_tax += get_tax_amount(item.item_code, vat_setting.account, doctype, invoice.name)
-		
+			# Summing up total tax (this row's share of the item's tax)
+			item_tax = get_tax_amount(item.item_code, vat_setting.account, doctype, invoice.name)
+			denom = net_by_item.get(item.item_code) or 0
+			total_tax += item_tax * ((item.net_amount or 0) / denom) if denom else item_tax
+
 	return total_taxable_amount, total_taxable_adjustment_amount, total_tax
 		
 
